@@ -1,40 +1,157 @@
 import streamlit as st
 from groq import Groq
-import PyPDF2
 
-st.set_page_config(page_title="🏆 المساعد الشخصي الشامل", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="المساعد الذكي | Groq", page_icon="🤖")
 
 # ============================================
-GROQ_API_KEY = "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"
+# 🔑 ضع مفتاح Groq API الخاص بك هنا مباشرة
 # ============================================
+DEFAULT_API_KEY = "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"
 
-st.title("🧠 المساعد الشخصي الشامل")
-st.markdown("**محادثة ذكية | تحليل ملفات PDF | تحليل مشاعر النصوص**")
+# ============================================
+# قائمة النماذج المتاحة والمحدثة
+# ============================================
+AVAILABLE_MODELS = {
+    "Llama 3.3 70B (الأقوى - عربي)": "llama-3.3-70b-versatile",
+    "Llama 3.1 8B (الأسرع)": "llama-3.1-8b-instant",
+    "Qwen 2.5 32B (متعدد اللغات)": "qwen-2.5-32b",
+    "DeepSeek R1 70B (تفكير عميق)": "deepseek-r1-distill-llama-70b"
+}
 
-tab1, tab2, tab3 = st.tabs(["💬 شات بوت ذكي", "📄 محلل PDF", "😊 محلل المشاعر"])
+# ============================================
+# واجهة المستخدم
+# ============================================
+st.title("🤖 المساعد الذكي | Groq")
+st.markdown("مدعوم بأحدث نماذج Groq - سريع ومجاني")
 
-# ------------------- تبويبة الشات -------------------
-with tab1:
-    st.subheader("💬 تحدث مع Llama 3.3")
+# ============================================
+# الشريط الجانبي
+# ============================================
+with st.sidebar:
+    st.header("⚙️ الإعدادات")
     
-    if "messages" not in st.session_state:
-        st.session_state.messages = [{"role": "assistant", "content": "أهلاً بك! كيف يمكنني مساعدتك اليوم؟"}]
+    # اختيار النموذج
+    model_choice = st.selectbox("اختر النموذج", list(AVAILABLE_MODELS.keys()))
+    model_name = AVAILABLE_MODELS[model_choice]
     
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    st.markdown("---")
     
-    if prompt := st.chat_input("اكتب سؤالك هنا..."):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-            
-        with st.chat_message("assistant"):
-            message_placeholder = st.empty()
-            try:
-                client = Groq(api_key=GROQ_API_KEY)
+    # اختيار طريقة إدخال المفتاح
+    key_method = st.radio(
+        "طريقة إدخال مفتاح API",
+        ["استخدام المفتاح المدمج", "إدخال مفتاحي الخاص"],
+        help="اختر 'المفتاح المدمج' إذا كنت قد أضفته في الكود"
+    )
+    
+    if key_method == "إدخال مفتاحي الخاص":
+        api_key = st.text_input("مفتاح Groq API", type="password", placeholder="gsk_...")
+        if not api_key:
+            st.warning("⚠️ الرجاء إدخال المفتاح")
+        else:
+            st.success("✅ تم استخدام مفتاحك")
+    else:
+        api_key = DEFAULT_API_KEY
+        if api_key == "ضع_مفتاح_Groq_هنا":
+            st.error("❌ لم تقم بإضافة المفتاح في الكود")
+            st.info("💡 قم بتعديل السطر 7 في الملف وأضف مفتاحك")
+        else:
+            st.success("✅ المفتاح المدمج مفعل")
+    
+    st.markdown("---")
+    st.markdown("### ℹ️ معلومات")
+    st.markdown("""
+    - **حد مجاني**: 1000 طلب/يوم
+    - **سرعة فائقة**
+    - **نماذج متنوعة**
+    """)
+    
+    st.markdown("---")
+    if st.button("🧹 مسح المحادثة", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
+
+# ============================================
+# تهيئة سجل المحادثة
+# ============================================
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "مرحباً! أنا مساعدك الذكي المدعوم من Groq. اسألني أي شيء."}
+    ]
+
+# ============================================
+# عرض الرسائل
+# ============================================
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# ============================================
+# حقل الإدخال
+# ============================================
+prompt = st.chat_input("اكتب سؤالك هنا...")
+
+if prompt:
+    # التحقق من المفتاح
+    if not api_key or api_key == "ضع_مفتاح_Groq_هنا":
+        st.error("❌ الرجاء إضافة مفتاح Groq API صحيح في الكود أو اختيار 'إدخال مفتاحي الخاص'")
+        st.stop()
+    
+    # التحقق من صحة المفتاح (يجب أن يبدأ بـ gsk_)
+    if not api_key.startswith("gsk_"):
+        st.error("❌ المفتاح غير صالح. يجب أن يبدأ بـ 'gsk_'")
+        st.stop()
+    
+    # إضافة رسالة المستخدم
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    
+    # الرد من المساعد
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        full_response = ""
+        
+        try:
+            with st.spinner(f"🔄 جاري استخدام {model_choice}..."):
+                # إنشاء عميل Groq
+                client = Groq(api_key=api_key)
+                
+                # تجهيز سجل المحادثة للسياق (آخر 6 رسائل)
+                messages = []
+                for msg in st.session_state.messages[-6:]:
+                    role = msg["role"]
+                    content = msg["content"]
+                    messages.append({"role": role, "content": content})
+                
+                # استدعاء API
                 response = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
+                    model=model_name,
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=1024
+                )
+                
+                full_response = response.choices[0].message.content
+                
+                if not full_response:
+                    full_response = "عذراً، لم أحصل على رد. حاول مرة أخرى."
+                    
+        except Exception as e:
+            error_msg = str(e)
+            
+            if "401" in error_msg or "invalid_api_key" in error_msg.lower():
+                full_response = "🔑 المفتاح غير صالح. تأكد من صحته وأنه يبدأ بـ 'gsk_'"
+            elif "429" in error_msg or "rate_limit" in error_msg.lower():
+                full_response = "⚠️ تم تجاوز الحد اليومي (1000 طلب). جرب غداً."
+            elif "decommissioned" in error_msg.lower():
+                full_response = "⚠️ هذا النموذج لم يعد متاحاً. اختر نموذجاً آخر من القائمة."
+            else:
+                full_response = f"❌ حدث خطأ: {error_msg[:150]}"
+        
+        message_placeholder.markdown(full_response)
+    
+    # حفظ الرد
+    st.session_state.messages.append({"role": "assistant", "content": full_response})                    model="llama-3.3-70b-versatile",
                     messages=st.session_state.messages,
                     temperature=0.7
                 )
