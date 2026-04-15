@@ -5,7 +5,7 @@ import PyPDF2
 st.set_page_config(page_title="🏆 المساعد الشخصي الشامل", page_icon="🧠", layout="wide")
 
 # ============================================
-GROQ_API_KEY = "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"
+GROQ_API_KEY = "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"
 # ============================================
 
 st.title("🧠 المساعد الشخصي الشامل")
